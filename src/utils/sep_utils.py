@@ -1,6 +1,6 @@
 import pandas as pd
 from config import SEP_SERIES, start_date, end_date
-from fred_utils import fred
+from utils.fred_utils import fred
 
 # ---------- Build SEP (wide & long) ----------
 def pull_sep_wide() -> pd.DataFrame:
