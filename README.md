@@ -5,3 +5,9 @@ This is a quick guide to pull historic economic data published by the Frederal R
 # Instructions
 
 asdf
+
+# EJ steps to do
+
+- test makefile commands
+- create instruction guide for how to run
+- create research option and make edits to get more previous data
