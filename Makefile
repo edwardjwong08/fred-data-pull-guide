@@ -14,7 +14,7 @@ SEP_WIDE := $(OUTDIR)/sep_only_wide.csv
 all: $(SEP_TIDY) $(SEP_WIDE)
 
 # Run the main script to generate outputs
-$(SEP_TIDY) $(SEP_WIDE): $(MAIN) config.py fred_utils.py sep_utils.py actuals_utils.py | $(OUTDIR)
+$(SEP_TIDY) $(SEP_WIDE): $(MAIN) config.py src/utils/fred_utils.py src/utils/sep_utils.py src/utils/actuals_utils.py | $(OUTDIR)
 	$(PYTHON) $(MAIN)
 
 # Ensure output directory exists
@@ -32,4 +32,3 @@ preview: $(SEP_TIDY)
 # Clean up generated CSVs
 clean:
 	rm -f $(SEP_TIDY) $(SEP_WIDE)
-
