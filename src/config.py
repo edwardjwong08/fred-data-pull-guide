@@ -30,5 +30,7 @@ SEP_SERIES = {
     }
 }
 
+# ---------- Start and End Dates for Data Pull ----------
+# change these to your desired timeframe, format YYYY-MM-DD
 start_date = "2020-01-01"
 end_date = "2029-01-01"
