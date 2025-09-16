@@ -1,4 +1,4 @@
-### Fred Data Pull Guide
+# Fred Data Pull Guide
 
 This is a quick guide to pull historic economic data published by the Frederal Reserve of St. Louis along with projections of the SEP (Summary of Economic Projections) Series. This guide walks through how to pull the data and adding to a customized data pull for various economic data that a user may want.
 
@@ -45,12 +45,10 @@ If using anything else: To get all of the output data run the command in your UV
 
 4. Run and check the outputs as descibed in the previous section (Step 5 in "Instructions to Run for Output").
 
-# Repo Organization
+## Repo Organization
 
 asdf
 
-# EJ steps to do
+### EJ steps to do
 
-- test makefile commands
-- create research readme and make edits to get more previous data
-- add plot info?
+- test makefile commands and consult with others
