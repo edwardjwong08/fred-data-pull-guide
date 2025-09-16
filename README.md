@@ -41,7 +41,7 @@ If using anything else: To get all of the output data run the command in your UV
 
 2. Check the `start_date` and `end_date` are the dates you want. For each projection and historical data these dates may change or not be available.
 
-3. Check that the actual codes still exists in `actuals_utils.py` and that those are wanted. If not comment out these values and in `actuals` (Line 182). If you want to add more values follow this readme (insert link) and then continue to the last step.
+3. Check that the actual codes still exists in `actuals_utils.py` and that those are wanted. If not comment out these values in `actuals` (Line 182). If you want to add more values follow navigate to `src/utils/Adding Data.md` and then continue to the last step.
 
 4. Run and check the outputs as descibed in the previous section (Step 5 in "Instructions to Run for Output").
 

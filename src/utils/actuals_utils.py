@@ -182,5 +182,4 @@ def build_actuals() -> pd.DataFrame:
     actuals = pd.concat([gdp_final, u_final, f_final, pce_final, core_final, rec_final, cpi_final, cpi_median_final, auto_diesel_final, fuel_oil_final, look_ahead_final_3m, look_ahead_final_1m, look_ahead_final_1y])
     actuals.index.name = "year"
     actuals.reset_index(inplace=True)
-
     return actuals
