@@ -47,7 +47,23 @@ If using anything else: To get all of the output data run the command in your UV
 
 ## Repo Organization
 
-asdf
+```
+├── README.md # Start here for guide
+├── Makefile # Makefile for non-UV package users
+├── .gitignore
+├── fred_macro_data_guide.ipynb # Notebook version of guide
+├── makefile.py # Makefile for UV package users
+├── requirements.txt
+└── src
+    ├── combine.py
+    ├── config.py
+    └── utils
+        ├── Adding Data.md # Adding data to report user guide
+        ├── actuals_utils.py
+        ├── fred_research.ipynb # Notebook used for FRED Data research and lookup
+        ├── fred_utils.py
+        └── sep_utils.py
+```
 
 ### EJ steps to do
 
