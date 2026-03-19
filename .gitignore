@@ -1,2 +1,6 @@
 .venv
 src/__pycahce__
+test.py
+test.ipynb
+.env
+.env.*
