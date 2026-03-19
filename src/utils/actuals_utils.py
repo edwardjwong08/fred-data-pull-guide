@@ -1,9 +1,9 @@
 import pandas as pd
-from config import start_date, end_date
+#from config import start_date, end_date
 from utils.fred_utils import fred
 
 #edits will be made here if you want to add on more macroeconomic data
-def build_actuals() -> pd.DataFrame:
+def build_actuals(start_date, end_date) -> pd.DataFrame:
     """Build actuals for GDP, Unemployment, Fed Funds, PCE, Core PCE, and additional added on data."""
 
     # Helper function to finalize the DataFrame

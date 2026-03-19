@@ -1,9 +1,9 @@
 import pandas as pd
-from config import SEP_SERIES, start_date, end_date
+from config import SEP_SERIES#, start_date, end_date
 from utils.fred_utils import fred
 
 # ---------- Build SEP (wide & long) ----------
-def pull_sep_wide() -> pd.DataFrame:
+def pull_sep_wide(start_date, end_date) -> pd.DataFrame:
     frames = []
     for group, codes in SEP_SERIES.items():
         for label, code in codes.items():
