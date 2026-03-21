@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import altair as alt
+from fredapi import Fred
 
 from utils.actuals_utils import build_actuals
 from utils.sep_utils import pull_sep_wide
@@ -9,7 +10,15 @@ from utils.sep_utils import pull_sep_wide
 st.title("FRED Data Chatbot Agent")
 st.markdown("Chat with FRED data, preview results, and build your custom report.")
 
-#fred_api_key = st.text_input("Input your FRED API Key here: ")
+fred_api_key = st.text_input("Input your FRED API Key here: ", type="password")
+try:
+    fred = Fred(api_key=fred_api_key)
+    #test case to verify key works, if fails then invalid key
+    gdp = fred.search('gross domestic product', sort_order='asc')
+    st.success("FRED API key set successfully!")
+except Exception as e:
+    st.error(f"Error setting FRED API key: {e}")
+    st.stop()
 
 st.markdown(
     "Add dates for your data series that you want to include in your report "
