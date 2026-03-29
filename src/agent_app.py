@@ -266,4 +266,4 @@ if series_name:
     with st.expander("Underlying data"):
         st.dataframe(series.tail(20))
 
-#to run : cd src streamlit run agent_app.py
+#to run : cd src python -m streamlit run agent_app.py
