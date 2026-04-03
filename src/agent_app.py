@@ -8,6 +8,7 @@ from sentence_transformers import SentenceTransformer, util
 
 from utils.actuals_utils import build_actuals
 from utils.sep_utils import pull_sep_wide
+from utils.gemini_call import get_fred_series_from_gemini
 
 st.title("FRED Data Chatbot Agent")
 st.markdown("Chat with FRED data, preview results, and build your custom report.")
@@ -52,34 +53,34 @@ except Exception:
 
 st.markdown(f"Start date: {start_date}, End date: {end_date}")
 
-# -----------------------------
-# GEMINI MODEL FUNCTION
-# -----------------------------
-def get_fred_series_from_gemini(prompt):
-    if not gemini_model:
-        return None
+# # -----------------------------
+# # GEMINI MODEL FUNCTION
+# # -----------------------------
+# def get_fred_series_from_gemini(prompt):
+#     if not gemini_model:
+#         return None
     
-    try:
-        response = gemini_model.generate_content(f"""
-        The user is searching for an economic data series.
+#     try:
+#         response = gemini_model.generate_content(f"""
+#         The user is searching for an economic data series.
 
-        Convert the request into a FRED series ID.
-        Only return the series ID, nothing else.
+#         Convert the request into a FRED series ID.
+#         Only return the series ID, nothing else.
 
-        Example:
-        Input: inflation CPI
-        Output: CPIAUCSL
+#         Example:
+#         Input: inflation CPI
+#         Output: CPIAUCSL
 
-        Input: {prompt}
-        Output:
-        """)
+#         Input: {prompt}
+#         Output:
+#         """)
 
-        series_id = response.text.strip().replace("\n", "")
-        return series_id
+#         series_id = response.text.strip().replace("\n", "")
+#         return series_id
 
-    except Exception as e:
-        st.error(f"Gemini error: {e}")
-        return None
+#     except Exception as e:
+#         st.error(f"Gemini error: {e}")
+#         return None
 
 # -----------------------------
 # DATA LAYER
@@ -373,7 +374,14 @@ if prompt:
                 "content": "No local matches found. Asking Gemini..."
             })
 
-            series_id = get_fred_series_from_gemini(prompt)
+            try:
+                series_id = get_fred_series_from_gemini(prompt, gemini_model)
+            except Exception as e:
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "type": "text",
+                    "content": f"Error occurred while fetching information with Gemini: {e}"
+                })
 
             if series_id:
                 try:
