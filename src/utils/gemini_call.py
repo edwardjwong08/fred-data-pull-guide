@@ -117,3 +117,82 @@ def search_fred_for_series(prompt, fred_api_key):
     except Exception as e:
         print("FRED search error, please try again:", e)
         return ['']
+    
+# -----------------------------
+# SERIES LABEL ENRICHMENT
+# -----------------------------
+def get_enriched_column_name(fred_id, fred_api_key, gemini_model):
+    """
+    Given a FRED series ID, fetch its metadata and use Gemini to produce
+    a structured column name in the format: topic.measure.FREDID
+
+    Falls back to 'external.user_query.FREDID' if anything fails.
+
+    Args:
+        fred_id (str): The FRED series ID (e.g. 'CPIAUCSL')
+        fred_api_key (str): FRED API key
+        gemini_model: Configured Gemini GenerativeModel instance, or None
+
+    Returns:
+        str: Column name in topic.measure.FREDID format
+    """
+    fallback = f"other_topic.measure.{fred_id.upper()}"
+
+    try:
+        fred = Fred(api_key=fred_api_key)
+        info = fred.get_series_info(fred_id)
+
+        title      = info.get("title", "")
+        units      = info.get("units_short", info.get("units", ""))
+        frequency  = info.get("frequency_short", info.get("frequency", ""))
+        notes      = str(info.get("notes", ""))[:300]   # trim long notes
+
+        if not title:
+            return fallback
+
+        # If no Gemini, do a simple heuristic split
+        if not gemini_model:
+            parts = title.split(":")
+            topic   = parts[0].strip().replace(" ", "_").lower() if len(parts) >= 2 else "economic_data"
+            measure = parts[1].strip().replace(" ", "_").lower() if len(parts) >= 2 else title.strip().replace(" ", "_").lower()
+            return f"{topic}.{measure}.{fred_id.upper()}"
+
+        response = gemini_model.generate_content(f"""
+            You are labelling an economic data series for use as a dataframe column name.
+
+            Given the FRED series metadata below, produce a column name in the exact format:
+            topic.measure.{fred_id.upper()}
+
+            Rules:
+            - topic: a short snake_case economic category (e.g. inflation, gdp, macoreconomic_uncertaintly, interest_rates, gold, pce, unemployment)
+            - measure: a short snake_case descriptor of what is measured for projections or actuals and a timeframe(e.g. actuals_q4, actuals_daily, actuals_year_end, projection_q1, projection_year_end, projection_monthly)
+            - Use only lowercase letters, digits, and underscores in topic and measure
+            - No spaces, no hyphens, no special characters
+            - Return ONLY the column name string, nothing else
+
+            Series metadata:
+            Title: {title}
+            Units: {units}
+            Frequency: {frequency}
+            Notes: {notes}
+
+            Output:
+            """)
+
+        raw = response.text.strip() if response.text else ""
+        raw = raw.replace("```", "").strip()
+
+        # Validate it has the right structure: two dots, ends with fred_id
+        parts = raw.split(".")
+        if (
+            len(parts) == 3
+            and parts[2].upper() == fred_id.upper()
+            and all(p.replace("_", "").replace("-", "").isalnum() for p in parts[:2])
+        ):
+            return f"{parts[0].lower()}.{parts[1].lower()}.{fred_id.upper()}"
+
+        return fallback
+
+    except Exception as e:
+        print(f"Label enrichment failed for {fred_id}: {e}")
+        return fallback

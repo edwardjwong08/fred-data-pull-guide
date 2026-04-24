@@ -1,5 +1,6 @@
 .venv
 src/__pycahce__
+src/utils/__pycahce__
 test*
 test.py
 test.ipynb

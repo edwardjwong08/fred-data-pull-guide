@@ -101,7 +101,7 @@ def add_fred_series_to_dataframe(series_ids, fred, combined_df):
 # -----------------------------
 # API KEYS
 # -----------------------------
-gemini_api_key = st.text_input("Input your Gemini API Key:", type="password")
+gemini_api_key = st.text_input("Input your Gemini API Key [here](https://aistudio.google.com/app/apikey): ", type="password")
 
 if gemini_api_key:
     try:
@@ -114,7 +114,7 @@ if gemini_api_key:
 else:
     gemini_model = None
 
-fred_api_key = st.text_input("Input your FRED API Key here:", type="password")
+fred_api_key = st.text_input("Input your FRED API Key [here](https://fredaccount.stlouisfed.org/apikeys): ", type="password")
 
 if fred_api_key:
     try:
