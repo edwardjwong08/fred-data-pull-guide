@@ -100,6 +100,46 @@ def get_fred_series_from_gemini(prompt, gemini_model, available_series, fred_api
         return search_fred_for_series(prompt, fred_api_key)
 
 
+def get_fred_series_info(fred_id, fred_api_key):
+    """
+    Fetch metadata for a FRED series ID and return a structured dict with:
+    title, frequency, units, seasonal_adjustment, and notes.
+ 
+    Args:
+        fred_id (str): The FRED series ID (e.g. 'CPIAUCSL')
+        fred_api_key (str): FRED API key
+ 
+    Returns:
+        dict with keys: fred_id, title, frequency, units, seasonal_adjustment, notes
+        Returns a dict with empty strings on failure.
+    """
+    empty = {
+        "fred_id": fred_id.upper(),
+        "title": "",
+        "frequency": "",
+        "units": "",
+        "seasonal_adjustment": "",
+        "notes": "",
+    }
+ 
+    try:
+        fred = Fred(api_key=fred_api_key)
+        info = fred.get_series_info(fred_id)
+ 
+        return {
+            "fred_id":             fred_id.upper(),
+            "title":               str(info.get("title", "")),
+            "frequency":           str(info.get("frequency", "")),
+            "units":               str(info.get("units", "")),
+            "seasonal_adjustment": str(info.get("seasonal_adjustment", "")),
+            "notes":               str(info.get("notes", "")).strip(),
+        }
+ 
+    except Exception as e:
+        print(f"get_fred_series_info failed for {fred_id}: {e}")
+        return empty
+ 
+ 
 def search_fred_for_series(prompt, fred_api_key):
     """
     Fallback FRED search if Gemini doesn't find or parse a result.

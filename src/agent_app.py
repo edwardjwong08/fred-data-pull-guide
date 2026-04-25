@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer, util
 
 from utils.actuals_utils import build_actuals
 from utils.sep_utils import pull_sep_wide
-from utils.gemini_call import get_fred_series_from_gemini
+from utils.gemini_call import get_fred_series_from_gemini, get_fred_series_info
 
 # -----------------------------
 # PAGE SETUP
@@ -19,6 +19,11 @@ st.title("FRED Data Research Assistant")
 st.markdown(
     "Search your preloaded economic data, explore related FRED series, preview charts, "
     "and build a custom report."
+)
+
+st.markdown(
+    "Data will be shown in the date ranged specified. Each column will be a different economic measurement which is "
+    "measured by topic (e.g. inflation, GDP, employment), measure (e.g. actuals/projections and timeframe), and the FRED series ID in the database."
 )
 
 # -----------------------------
@@ -51,6 +56,23 @@ def ensure_selection_key(series_name):
 @st.cache_resource
 def load_embedding_model():
     return SentenceTransformer("all-MiniLM-L6-v2")
+
+
+@st.cache_data(show_spinner=False)
+def fetch_series_metadata(series_ids_tuple: tuple, fred_api_key: str) -> dict:
+    """
+    Fetch FRED metadata for a tuple of series IDs.
+    Uses a tuple (not list) so it is hashable for st.cache_data.
+    Returns a dict keyed by the column name (e.g. 'external.user_query.CPIAUCSL').
+    """
+    metadata = {}
+    for col in series_ids_tuple:
+        # Extract the raw FRED ID from the last segment after '.'
+        parts = str(col).split(".")
+        fred_id = parts[-1] if parts else col
+        info = get_fred_series_info(fred_id, fred_api_key)
+        metadata[col] = info
+    return metadata
 
 
 def get_column_embeddings(model, combined_df):
@@ -101,7 +123,7 @@ def add_fred_series_to_dataframe(series_ids, fred, combined_df):
 # -----------------------------
 # API KEYS
 # -----------------------------
-gemini_api_key = st.text_input("Input your Gemini API Key [here](https://aistudio.google.com/app/apikey): ", type="password")
+gemini_api_key = st.text_input("Input your Gemini API Key (Learn how to create one [here](https://aistudio.google.com/app/apikey)): ", type="password")
 
 if gemini_api_key:
     try:
@@ -114,7 +136,7 @@ if gemini_api_key:
 else:
     gemini_model = None
 
-fred_api_key = st.text_input("Input your FRED API Key [here](https://fredaccount.stlouisfed.org/apikeys): ", type="password")
+fred_api_key = st.text_input("Input your FRED API Key (Learn how to create one [here](https://fredaccount.stlouisfed.org/apikeys)): ", type="password")
 
 if fred_api_key:
     try:
@@ -286,8 +308,31 @@ for i, msg in enumerate(st.session_state.messages):
 
         elif msg["type"] == "matches":
             st.write(msg["content"])
-            for display_name in msg.get("display_names", []):
+            raw_matches = msg.get("matches", [])
+            display_names = msg.get("display_names", [])
+            # Fetch metadata for all series in this message (cached after first call)
+            metadata = {}
+            if raw_matches and fred_api_key:
+                metadata = fetch_series_metadata(tuple(raw_matches), fred_api_key)
+
+            for display_name, series_col in zip(display_names, raw_matches):
                 st.write(f"**{display_name}**")
+                info = metadata.get(series_col, {})
+                # Only render the expander if we got at least a title back
+                if info.get("title"):
+                    with st.expander("Series details", expanded=False):
+                        st.markdown(f"**Title:** {info.get('title', '—')}")
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            st.markdown(f"**Frequency:** {info.get('frequency', '—')}")
+                            st.markdown(f"**Units:** {info.get('units', '—')}")
+                        with col_b:
+                            st.markdown(f"**Seasonal Adjustment:** {info.get('seasonal_adjustment', '—')}")
+                            st.markdown(f"**FRED ID:** {info.get('fred_id', '—')}")
+                        notes = info.get("notes", "").strip()
+                        if notes:
+                            st.markdown("**Notes:**")
+                            st.caption(notes)
 
         elif msg["type"] == "multi_series_preview":
             all_names = msg["series_names"]
@@ -424,23 +469,5 @@ if prompt:
 
 # the chat handler (above) are reflected in the report and bottom preview panel to get new added data if searched from outside via FRED
 combined_df = st.session_state.get("combined_df")
-
-# -----------------------------
-# REPORT GENERATION
-# -----------------------------
-if st.session_state.query and "report" in st.session_state.query.lower():
-    included = get_selected_series()
-    if not included:
-        st.warning("No series selected.")
-    elif combined_df is not None:
-        df_report = combined_df[included]
-        out = df_report.reset_index()
-        csv = out.to_csv(index=False)
-        st.download_button(
-            "Download CSV",
-            csv,
-            "fred_report.csv",
-            key="download_bottom"
-        )
 
 #to run : .venv\Scripts\Activate cd src python -m streamlit run agent_app.py
