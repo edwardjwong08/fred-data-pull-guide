@@ -2,7 +2,7 @@ import pandas as pd
 from pandas_datareader import data as pdr
 
 # ---------- Helper to fetch FRED series ----------
-def fred(code: str, start_date: str, end_date: str) -> pd.Series:
+def fred_call(code: str, start_date: str, end_date: str) -> pd.Series:
     # Fetch data from FRED
     # Inputs: code (str) - FRED series code, start_date (str) - start date desired, end_date (str) - end date desired
     try:

@@ -1,6 +1,10 @@
 .venv
 src/__pycahce__
+src/utils/__pycahce__
+test*
 test.py
 test.ipynb
 .env
 .env.*
+todo.md
+gemini_call_test.py
