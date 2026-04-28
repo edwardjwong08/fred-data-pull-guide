@@ -27,6 +27,9 @@ st.markdown(
     "measured by topic (e.g. inflation, GDP, employment), measure (e.g. actuals/projections and timeframe), and the FRED series ID in the database."
 )
 
+st.markdown("This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis."
+            "View terms of use for the FRED API [here](https://fred.stlouisfed.org/docs/api/terms_of_use.html).")
+
 # -----------------------------
 # HELPER FUNCTIONS
 # -----------------------------
@@ -102,37 +105,70 @@ def search_local_series(prompt, model, combined_df, threshold=0.5, top_k=10):
 
 
 def add_fred_series_to_dataframe(series_ids, combined_df, start_date, end_date):
+    """
+    Adds FRED series to the combined dataframe consistently.
+    """
+
     added = []
+
+# normalize inputs
+    if isinstance(series_ids, str):
+        series_ids = [s.strip() for s in series_ids.split(",")]
+
+    if not isinstance(series_ids, list):
+        st.warning("Gemini returned an unexpected format for series IDs.")
+        return combined_df, added
+
     for sid in series_ids:
         sid = str(sid).strip().upper()
+
         if not sid:
             continue
-        try:
-            new_series = fred_call(sid, start_date, end_date)
-            if new_series is None or new_series.empty:
-                continue
-            new_series.index = pd.to_datetime(new_series.index)
-            new_series_df = new_series.to_frame(name=f"external.user_query.{sid}")
-            new_series_df.index.name = "obs_date"
-            combined_df = pd.concat([combined_df, new_series_df], axis=1)
-            combined_df = combined_df.loc[:, ~combined_df.columns.duplicated()]
-            col_name = f"external.user_query.{sid}"
 
-            # duplicate columns
-            if col_name in combined_df.columns:
-                added.append(col_name)   # <-- THIS LINE FIXES YOUR ISSUE
-                ensure_selection_key(col_name)
-                continue
+        col_name = f"external.user_query.{sid}"
 
-            combined_df = pd.concat([combined_df, new_series_df], axis=1)
-            combined_df = combined_df.loc[:, ~combined_df.columns.duplicated()]
+        if col_name in combined_df.columns:
             added.append(col_name)
             ensure_selection_key(col_name)
-        except Exception as e:
-            st.error(f"Error fetching FRED series **{sid}**: {e}")
             continue
-    return combined_df, added
 
+        try:
+            new_series = fred_call(sid, start_date, end_date)
+
+            if new_series is None or new_series.empty:
+                st.warning(f"FRED series '{sid}' returned no data for the selected date range.")
+                continue
+
+            new_series.index = pd.to_datetime(new_series.index, errors="coerce")
+            new_series = new_series.dropna()
+
+            if new_series.empty:
+                st.warning(f"FRED series '{sid}' contains only invalid dates after parsing.")
+                continue
+
+            new_series_df = new_series.to_frame(name=col_name)
+            new_series_df.index.name = "obs_date"
+
+            combined_df = pd.concat([combined_df, new_series_df], axis=1)
+
+            # Remove any accidental duplicates
+            combined_df = combined_df.loc[:, ~combined_df.columns.duplicated()]
+
+            if col_name in combined_df.columns:
+                added.append(col_name)
+                ensure_selection_key(col_name)
+            else:
+                st.warning(f"Failed to properly add '{sid}' to dataframe.")
+
+        except Exception as e:
+            st.error(f"Error fetching FRED series '{sid}': {e}")
+            continue
+
+    # sync all selection keys to avoid sidebar issues (some may be new, some may be old)
+    for col in combined_df.columns:
+        ensure_selection_key(col)
+
+    return combined_df, added
 
 # -----------------------------
 # API KEYS
@@ -269,14 +305,6 @@ if combined_df is None:
 # -----------------------------
 st.sidebar.header("Data Preview")
 
-# remove after errors fixed
-cols = list(combined_df.columns)
-dupes = [c for c in set(cols) if cols.count(c) > 1]
-
-st.write("Duplicate columns:", dupes)
-st.write("Total columns:", len(cols), "Unique:", len(set(cols)))
-
-
 with st.sidebar.expander("Available series", expanded=False):
     if combined_df is not None:
         name_list = [(format_series_label(col), col) for col in combined_df.columns]
@@ -285,17 +313,17 @@ with st.sidebar.expander("Available series", expanded=False):
         btn_col1, btn_col2 = st.columns(2)
         with btn_col1:
             if st.button("Select All", key="select_all_btn"):
-                for i, (_, col) in enumerate(name_list):
+                for _, col in name_list:
                     st.session_state.selections[col] = True
-                    st.session_state[f"sidebar_{i}"] = True
+                    st.session_state[f"sidebar_{col}"] = True
         with btn_col2:
             if st.button("Deselect All", key="deselect_all_btn"):
-                for i, (_, col) in enumerate(name_list):
+                for _, col in name_list:
                     st.session_state.selections[col] = False
-                    st.session_state[f"sidebar_{i}"] = False
+                    st.session_state[f"sidebar_{col}"] = False
 
-        for i, (display_name, col) in enumerate(name_list):
-            checkbox_key = f"sidebar_{i}"
+        for display_name, col in name_list:
+            checkbox_key = f"sidebar_{col}"
 
             if checkbox_key not in st.session_state:
                 st.session_state[checkbox_key] = st.session_state.selections.get(col, False)
