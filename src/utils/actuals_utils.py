@@ -1,6 +1,6 @@
 import pandas as pd
 #from config import start_date, end_date
-from utils.fred_utils import fred
+from utils.fred_utils import fred_call
 
 #edits will be made here if you want to add on more macroeconomic data
 def build_actuals(start_date, end_date) -> pd.DataFrame:
@@ -39,7 +39,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     # --- Beginning of Actuals: You can make adjustments here and add additional data here ---
 
     # --- GDP: real GDP (GDPC1), Q4/Q4 % ---
-    gdp = fred("GDPC1", start_date, end_date) #real gross domestic product, done as part of q4 ending percentage, seasonally adjusted
+    gdp = fred_call("GDPC1", start_date, end_date) #real gross domestic product, done as part of q4 ending percentage, seasonally adjusted
     gdp_q4 = gdp.resample("QE").last().to_period("Q") #pull Q4 data
     gdp_q4 = gdp_q4[gdp_q4.index.quarter == 4]
     gdp_q4q4 = (gdp_q4 / gdp_q4.shift(1) - 1) * 100 #make is percent
@@ -47,21 +47,21 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     gdp_final = finalize(gdp_q4q4, "gdp", "actual_q4q4", "GDPC1", month_day='-12-31') #month_day input forces to end of month in this case
 
     # --- Unemployment: UNRATE, Q4 average ---
-    u = fred("UNRATE", start_date, end_date) # unemployment rate at the end of q4 for a given year, raw data taken monthly, seasonally adjusted
+    u = fred_call("UNRATE", start_date, end_date) # unemployment rate at the end of q4 for a given year, raw data taken monthly, seasonally adjusted
     u_q = u.resample("QE").mean()
     u_q4 = u_q[u_q.index.quarter == 4]
     u_q4.index = u_q4.index.year
     u_final = finalize(u_q4, "unemployment", "actual_q4_avg", "UNRATE", month_day='-12-31')
 
     # --- Fed Funds: FEDFUNDS, year-end value ---
-    f = fred("FEDFUNDS", start_date, end_date) #fed funds interest rate at year end, values taken at end of the day daily from raw data, not seasonally adjusted
+    f = fred_call("FEDFUNDS", start_date, end_date) #fed funds interest rate at year end, values taken at end of the day daily from raw data, not seasonally adjusted
     f_m = f.resample("ME").last()
     f_yend = f_m[f_m.index.month == 12]
     f_yend.index = f_yend.index.year
     f_final = finalize(f_yend, "fed_funds", "actual_yearend", "FEDFUNDS", month_day='-12-31')
 
     # --- PCE: PCECTPI, Q4/Q4 % ---
-    pce = fred("PCECTPI", start_date, end_date) #PCE price index of inflation in chain type, done as part of q4 ending percentage, seasonally adjusted
+    pce = fred_call("PCECTPI", start_date, end_date) #PCE price index of inflation in chain type, done as part of q4 ending percentage, seasonally adjusted
     pce_q4 = pce.resample("QE").last().to_period("Q")
     pce_q4 = pce_q4[pce_q4.index.quarter == 4]
     pce_q4q4 = (pce_q4 / pce_q4.shift(1) - 1) * 100
@@ -69,7 +69,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     pce_final = finalize(pce_q4q4, "pce", "actual_q4q4", "PCECTPI", month_day='-12-31')
 
     # --- Core PCE: PCEPILFE, Q4/Q4 % ---
-    core = fred("PCEPILFE", start_date, end_date) #PCE price index less food and energy, done as part of q4 ending percentage, seasonally adjusted
+    core = fred_call("PCEPILFE", start_date, end_date) #PCE price index less food and energy, done as part of q4 ending percentage, seasonally adjusted
     core_q4 = core.resample("QE").last().to_period("Q")
     core_q4 = core_q4[core_q4.index.quarter == 4]
     core_q4q4 = (core_q4 / core_q4.shift(1) - 1) * 100
@@ -80,7 +80,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
 
     # --- Actuals: NBER recession indicator ---
     #see here on information on NBER recession indicators: https://www.nber.org/research/business-cycle-dating/business-cycle-dating-procedure-frequently-asked-questions
-    rec = fred("USRECQ", start_date, end_date) #original data is calculated quarterly at end of the quarter with no seasonal adjustments, 1 if recession, 0 if not
+    rec = fred_call("USRECQ", start_date, end_date) #original data is calculated quarterly at end of the quarter with no seasonal adjustments, 1 if recession, 0 if not
     rec_q = rec.resample("QE").max() #pulling quarterly info
     rec_q.index.name = "obs_date"
     rec_q = rec_q.to_frame("value")
@@ -92,7 +92,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     rec_final = rec_q.reset_index()
 
     # --- Actuals: Sticky Price Consumer Price Index (CPI) ---
-    cpi = fred("STICKCPIM157SFRBATL", start_date, end_date) #original data is calculated monthly at end of the month while also accounting for seasonal adjustments, percent change
+    cpi = fred_call("STICKCPIM157SFRBATL", start_date, end_date) #original data is calculated monthly at end of the month while also accounting for seasonal adjustments, percent change
     cpi_q = cpi.resample("QE").last() #gets at the end of quarter
     cpi_q.index.name = "obs_date"
     cpi_q = cpi_q.to_frame("value")
@@ -104,7 +104,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     cpi_final = cpi_q.reset_index()
 
     # --- Actuals: Median Consumer Price Index (CPI) ---
-    cpi_median = fred("MEDCPIM158SFRBCLE", start_date, end_date) #original data is calculated monthly at end of the month while also accounting for seasonal adjustments, annual percent change
+    cpi_median = fred_call("MEDCPIM158SFRBCLE", start_date, end_date) #original data is calculated monthly at end of the month while also accounting for seasonal adjustments, annual percent change
     cpi_median_q = cpi_median.resample("QE").last() #gets at the end of quarter
     cpi_median_q.index.name = "obs_date"
     cpi_median_q = cpi_median_q.to_frame("value")
@@ -116,7 +116,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     cpi_median_final = cpi_median_q.reset_index()
 
     # --- Actuals: Auto Diesel Fuel Costs in US Urban Metros (PPG) ---
-    auto_diesel = fred("APU000074717", start_date, end_date) #original data is calculated monthly at end of the month with no seasonal adjustments, us dollars per gallon
+    auto_diesel = fred_call("APU000074717", start_date, end_date) #original data is calculated monthly at end of the month with no seasonal adjustments, us dollars per gallon
     auto_diesel_q = auto_diesel.resample("QE").last() #gets at the end of quarter
     auto_diesel_q.index.name = "obs_date"
     auto_diesel_q = auto_diesel_q.to_frame("value")
@@ -128,7 +128,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     auto_diesel_final = auto_diesel_q.reset_index()
 
     # --- Actuals: Consumer Price Index for Fuel Oil and Other Fuels in US Urban Metros (indexed from 1982-1984=100) ---
-    fuel_oil = fred("CUSR0000SEHE", start_date, end_date) #original data is calculated monthly at end of the month while also accounting for seasonal adjustments, index at 100 for average in 1982-1984
+    fuel_oil = fred_call("CUSR0000SEHE", start_date, end_date) #original data is calculated monthly at end of the month while also accounting for seasonal adjustments, index at 100 for average in 1982-1984
     fuel_oil_q = fuel_oil.resample("QE").last() #gets at the end of quarter
     fuel_oil_q.index.name = "obs_date"
     fuel_oil_q = fuel_oil_q.to_frame("value")
@@ -143,7 +143,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     #these next 3 values may assist in trustability in our other macroeconomic projections
     #see: http://dx.doi.org/10.1257/aer.20131193 for reference on this info (Jurado, ludvigson, Ng (2015) Measuring Uncertainty)
     #3 month
-    look_ahead3m = fred("JLNUM3M", start_date, end_date) #original data is calculated monthly at end of the month while scaled from a 3 month look ahead
+    look_ahead3m = fred_call("JLNUM3M", start_date, end_date) #original data is calculated monthly at end of the month while scaled from a 3 month look ahead
     look_ahead3m_q = look_ahead3m.resample("QE").last() #gets at the end of quarter
     look_ahead3m_q.index.name = "obs_date"
     look_ahead3m_q = look_ahead3m_q.to_frame("value")
@@ -155,7 +155,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     look_ahead_final_3m = look_ahead3m_q.reset_index()
 
     #1 month
-    look_ahead1m = fred("JLNUM1M", start_date, end_date) #original data is calculated monthly at end of the month while scaled from a 1 month look ahead
+    look_ahead1m = fred_call("JLNUM1M", start_date, end_date) #original data is calculated monthly at end of the month while scaled from a 1 month look ahead
     look_ahead1m_q = look_ahead1m.resample("QE").last() #gets at the end of quarter
     look_ahead1m_q.index.name = "obs_date"
     look_ahead1m_q = look_ahead1m_q.to_frame("value")
@@ -167,7 +167,7 @@ def build_actuals(start_date, end_date) -> pd.DataFrame:
     look_ahead_final_1m = look_ahead1m_q.reset_index()
 
     #1 year
-    look_ahead1y = fred("JLNUM12M", start_date, end_date) #original data is calculated monthly at end of the month while scaled from a 12 month look ahead
+    look_ahead1y = fred_call("JLNUM12M", start_date, end_date) #original data is calculated monthly at end of the month while scaled from a 12 month look ahead
     look_ahead1y_q = look_ahead1y.resample("QE").last() #gets at the end of quarter
     look_ahead1y_q.index.name = "obs_date"
     look_ahead1y_q = look_ahead1y_q.to_frame("value")

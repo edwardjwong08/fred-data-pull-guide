@@ -8,6 +8,7 @@ from sentence_transformers import SentenceTransformer, util
 
 from utils.actuals_utils import build_actuals
 from utils.sep_utils import pull_sep_wide
+from utils.fred_utils import fred_call
 from utils.gemini_call import get_fred_series_from_gemini, get_fred_series_info
 
 # -----------------------------
@@ -90,7 +91,7 @@ def get_column_embeddings(model, combined_df):
     return column_names, embeddings
 
 
-def search_local_series(prompt, model, combined_df, threshold=0.25, top_k=10):
+def search_local_series(prompt, model, combined_df, threshold=0.5, top_k=10):
     column_names, column_embeddings = get_column_embeddings(model, combined_df)
     if not column_names or column_embeddings is None:
         return []
@@ -100,22 +101,35 @@ def search_local_series(prompt, model, combined_df, threshold=0.25, top_k=10):
     return [column_names[hit["corpus_id"]] for hit in hits]
 
 
-def add_fred_series_to_dataframe(series_ids, fred, combined_df):
+def add_fred_series_to_dataframe(series_ids, combined_df, start_date, end_date):
     added = []
     for sid in series_ids:
         sid = str(sid).strip().upper()
         if not sid:
             continue
         try:
-            new_series = fred.get_series(sid)
+            new_series = fred_call(sid, start_date, end_date)
             if new_series is None or new_series.empty:
                 continue
             new_series.index = pd.to_datetime(new_series.index)
+            new_series_df = new_series.to_frame(name=f"external.user_query.{sid}")
+            new_series_df.index.name = "obs_date"
+            combined_df = pd.concat([combined_df, new_series_df], axis=1)
+            combined_df = combined_df.loc[:, ~combined_df.columns.duplicated()]
             col_name = f"external.user_query.{sid}"
-            combined_df[col_name] = new_series
+
+            # duplicate columns
+            if col_name in combined_df.columns:
+                added.append(col_name)   # <-- THIS LINE FIXES YOUR ISSUE
+                ensure_selection_key(col_name)
+                continue
+
+            combined_df = pd.concat([combined_df, new_series_df], axis=1)
+            combined_df = combined_df.loc[:, ~combined_df.columns.duplicated()]
             added.append(col_name)
             ensure_selection_key(col_name)
-        except Exception:
+        except Exception as e:
+            st.error(f"Error fetching FRED series **{sid}**: {e}")
             continue
     return combined_df, added
 
@@ -128,7 +142,7 @@ gemini_api_key = st.text_input("Input your Gemini API Key (Learn how to create o
 if gemini_api_key:
     try:
         genai.configure(api_key=gemini_api_key)
-        gemini_model = genai.GenerativeModel("gemini-2.5-flash")
+        gemini_model = genai.GenerativeModel("gemini-embedding-001")
         st.success("Gemini API key set successfully!")
     except Exception as e:
         gemini_model = None
@@ -255,6 +269,14 @@ if combined_df is None:
 # -----------------------------
 st.sidebar.header("Data Preview")
 
+# remove after errors fixed
+cols = list(combined_df.columns)
+dupes = [c for c in set(cols) if cols.count(c) > 1]
+
+st.write("Duplicate columns:", dupes)
+st.write("Total columns:", len(cols), "Unique:", len(set(cols)))
+
+
 with st.sidebar.expander("Available series", expanded=False):
     if combined_df is not None:
         name_list = [(format_series_label(col), col) for col in combined_df.columns]
@@ -263,24 +285,25 @@ with st.sidebar.expander("Available series", expanded=False):
         btn_col1, btn_col2 = st.columns(2)
         with btn_col1:
             if st.button("Select All", key="select_all_btn"):
-                for _, col in name_list:
+                for i, (_, col) in enumerate(name_list):
                     st.session_state.selections[col] = True
-                    st.session_state[f"sidebar_{col}"] = True
+                    st.session_state[f"sidebar_{i}"] = True
         with btn_col2:
             if st.button("Deselect All", key="deselect_all_btn"):
-                for _, col in name_list:
+                for i, (_, col) in enumerate(name_list):
                     st.session_state.selections[col] = False
-                    st.session_state[f"sidebar_{col}"] = False
+                    st.session_state[f"sidebar_{i}"] = False
 
-        for display_name, col in name_list:
-            checkbox_key = f"sidebar_{col}"
-            # Initialize only if not yet set
+        for i, (display_name, col) in enumerate(name_list):
+            checkbox_key = f"sidebar_{i}"
+
             if checkbox_key not in st.session_state:
                 st.session_state[checkbox_key] = st.session_state.selections.get(col, False)
 
             include = st.checkbox(display_name, key=checkbox_key)
-            # Keep selections dict in sync with the checkbox widget value
+
             st.session_state.selections[col] = include
+
     else:
         st.write("Load data first to preview available series.")
 
@@ -440,7 +463,7 @@ if prompt:
             valid_series_ids = [sid for sid in series_ids if str(sid).strip()]
 
             if valid_series_ids:
-                combined_df, added_matches = add_fred_series_to_dataframe(series_ids, fred, combined_df)
+                combined_df, added_matches = add_fred_series_to_dataframe(series_ids, combined_df, start_date, end_date)
                 st.session_state["combined_df"] = combined_df
                 st.session_state.matches = added_matches
 

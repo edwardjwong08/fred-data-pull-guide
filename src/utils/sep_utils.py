@@ -1,13 +1,13 @@
 import pandas as pd
 from config import SEP_SERIES#, start_date, end_date
-from utils.fred_utils import fred
+from utils.fred_utils import fred_call
 
 # ---------- Build SEP (wide & long) ----------
 def pull_sep_wide(start_date, end_date) -> pd.DataFrame:
     frames = []
     for group, codes in SEP_SERIES.items():
         for label, code in codes.items():
-            s = fred(code, start_date, end_date).to_frame()
+            s = fred_call(code, start_date, end_date).to_frame()
             s.columns = [f"{group}.{label}.{code}"]
             frames.append(s)
     wide = pd.concat(frames, axis=1).sort_index()
