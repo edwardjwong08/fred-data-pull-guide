@@ -6,6 +6,5 @@ requests
 google.generativeai
 fredapi
 streamlit
-io
 altair
 sentence_transformers
