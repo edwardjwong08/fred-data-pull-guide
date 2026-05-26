@@ -27,7 +27,7 @@ st.markdown(
     "measured by topic (e.g. inflation, GDP, employment), measure (e.g. actuals/projections and timeframe), and the FRED series ID in the database."
 )
 
-st.markdown("This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis."
+st.markdown("This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. "
             "View terms of use for the FRED API [here](https://fred.stlouisfed.org/docs/api/terms_of_use.html).")
 
 # -----------------------------
@@ -183,7 +183,7 @@ def get_combined_df():
 # -----------------------------
 # API KEYS
 # -----------------------------
-gemini_api_key = st.text_input("Input your Gemini API Key (Learn how to create one [here](https://aistudio.google.com/app/apikey)): ", type="password")
+gemini_api_key = st.text_input("Input your Gemini API Key (Learn how to create one [here](https://aistudio.google.com/app/apikey), it takes under 2 minutes): ", type="password")
 
 if gemini_api_key:
     try:
@@ -196,7 +196,7 @@ if gemini_api_key:
 else:
     gemini_model = None
 
-fred_api_key = st.text_input("Input your FRED API Key (Learn how to create one [here](https://fredaccount.stlouisfed.org/apikeys)): ", type="password")
+fred_api_key = st.text_input("Input your FRED API Key (Learn how to create one [here](https://fredaccount.stlouisfed.org/apikeys), it takes under 2 minutes): ", type="password")
 
 if fred_api_key:
     if st.session_state.get("fred_key_validated") != fred_api_key:

@@ -1,4 +1,10 @@
-# Fred Data Pull Guide
+# FRED Research Agent (For All)
+
+[Visit the FRED Agent Here](https://connect.posit.cloud/ejwong08/content/019e1d68-dd4a-dfe5-8b6a-7d95dcc0154c)
+
+This is an custom AI Agent which will help users pull historic economic data reports published by the Frederal Reserve of St. Louis including projections of the SEP (Summary of Economic Projections) Series and other measurements of interest. This agent pulls data within the desired timeframe and allows for customized data to be added that a user may want or is interested in researching in. If you are interested for a more techincal guide to manually pull the data, view the guide below.
+
+##  FRED Data Pull Guide (For Analysts)
 
 This is a quick guide to pull historic economic data published by the Frederal Reserve of St. Louis along with projections of the SEP (Summary of Economic Projections) Series. This guide walks through how to pull the data and adding to a customized data pull for various economic data that a user may want.
 
@@ -69,7 +75,3 @@ If using anything else: To get all of the output data run the command in your UV
         ├── gemini_call.py # Gemini-assisted FRED series lookup helpers
         └── sep_utils.py
 ```
-
-### EJ steps to do
-
-- test makefile commands and consult with others
