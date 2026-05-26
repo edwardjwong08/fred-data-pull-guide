@@ -56,7 +56,9 @@ If using anything else: To get all of the output data run the command in your UV
 ├── fred_macro_data_guide.ipynb # Notebook version of guide
 ├── makefile.py # Makefile for UV package users
 ├── requirements.txt
+├── output_data # Generated CSV outputs land here
 └── src
+    ├── agent_app.py # Streamlit chat-style FRED data research assistant
     ├── combine.py
     ├── config.py
     └── utils
@@ -64,6 +66,7 @@ If using anything else: To get all of the output data run the command in your UV
         ├── actuals_utils.py
         ├── fred_research.ipynb # Notebook used for FRED Data research and lookup
         ├── fred_utils.py
+        ├── gemini_call.py # Gemini-assisted FRED series lookup helpers
         └── sep_utils.py
 ```
 
