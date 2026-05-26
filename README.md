@@ -25,7 +25,9 @@ The goal for this project is to show how to pull data generally off of the Feder
 
 3. Go to the summary of economic projections under sources https://fred.stlouisfed.org/release?rid=326 to confirm that your SEP_SERIES is up to date. Currently there are 5 categories and 7 tendency measurements in the SEP Series Projections, this is subject to change. This will be done in `src/config.py`
 
-4. Go to the function `actuals_utils` in the section 'Beginning of Actuals' (Line 39) and check to see if the current data ids included are still active in each of the `fred()` function. Feel free to add or remove those if desired, it must be changed in the section you did it at along with the final output in `actuals` (Line 182). Confirm the values you want to label them as to ensure consistency in the final output before appending them to `actuals` (Line 182).
+4. Go to the function `actuals_utils` in the section 'Beginning of Actuals' (Line 39) and check to see if the current data ids included are still active in each of the `fred_call()` function. Feel free to add or remove those if desired, it must be changed in the section you did it at along with the final output in `actuals` (Line 182). Confirm the values you want to label them as to ensure consistency in the final output before appending them to `actuals` (Line 182).
+
+> Note: `src/agent_app.py` is a parallel Streamlit front door that consumes the same `actuals_utils.py` / `sep_utils.py` modules. Any data you add or remove there will also appear in the agent app's preloaded series. Launch it with `python -m streamlit run src/agent_app.py` from the project root (after activating `.venv`).
 
 5. Navigate and run the code and observe the 2 output files which are explained in the next step. To run the code follow the one of the steps below depending on what file manager you are using.
 

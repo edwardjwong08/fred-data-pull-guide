@@ -1,5 +1,4 @@
 import pandas as pd
-#from config import start_date, end_date
 from utils.fred_utils import fred_call
 
 #edits will be made here if you want to add on more macroeconomic data

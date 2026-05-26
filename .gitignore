@@ -1,6 +1,6 @@
 .venv
-src/__pycahce__
-src/utils/__pycahce__
+src/__pycache__
+src/utils/__pycache__
 test*
 test.py
 test.ipynb
@@ -8,3 +8,4 @@ test.ipynb
 .env.*
 todo.md
 gemini_call_test.py
+fix.md

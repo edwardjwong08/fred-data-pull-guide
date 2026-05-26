@@ -1,16 +1,15 @@
-import numpy as np
 import pandas as pd
+from config import SEP_SERIES, start_date, end_date
 from utils.sep_utils import pull_sep_wide, sep_wide_to_long
 from utils.actuals_utils import build_actuals
 
 # ---------- Merge projections + actuals ----------
 def build_combined() -> pd.DataFrame:
-    sep_wide = pull_sep_wide()
+    sep_wide = pull_sep_wide(start_date, end_date)
     sep_long = sep_wide_to_long(sep_wide)
-    actuals = build_actuals()
+    actuals = build_actuals(start_date, end_date)
     combined = pd.concat([sep_long, actuals], ignore_index=True)
     combined = combined.sort_values(["variable_group","year","type","measure"]).reset_index(drop=True)
-    combined["value"] = combined["value"].fillna(np.nan)  # or leave as NaN
     return combined, sep_wide
 
 if __name__ == "__main__":

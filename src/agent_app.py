@@ -104,30 +104,32 @@ def search_local_series(prompt, model, combined_df, threshold=0.5, top_k=10):
     return [column_names[hit["corpus_id"]] for hit in hits]
 
 
-def add_fred_series_to_dataframe(series_ids, combined_df, start_date, end_date):
+def add_fred_series(series_ids, start_date, end_date):
     """
-    Adds FRED series to the combined dataframe consistently.
+    Fetch FRED series and stash them in st.session_state["external_series"].
+    Returns the list of column names that were added (or already present).
+    The cached base dataframe is never mutated; get_combined_df() merges externals
+    in on every rerun so they survive a Load Data click.
     """
-
     added = []
 
-# normalize inputs
     if isinstance(series_ids, str):
         series_ids = [s.strip() for s in series_ids.split(",")]
 
     if not isinstance(series_ids, list):
         st.warning("Gemini returned an unexpected format for series IDs.")
-        return combined_df, added
+        return added
+
+    extras = st.session_state.setdefault("external_series", {})
 
     for sid in series_ids:
         sid = str(sid).strip().upper()
-
         if not sid:
             continue
 
         col_name = f"external.user_query.{sid}"
 
-        if col_name in combined_df.columns:
+        if col_name in extras:
             added.append(col_name)
             ensure_selection_key(col_name)
             continue
@@ -135,7 +137,7 @@ def add_fred_series_to_dataframe(series_ids, combined_df, start_date, end_date):
         try:
             new_series = fred_call(sid, start_date, end_date)
 
-            if new_series is None or new_series.empty:
+            if new_series.empty or new_series.attrs.get("fred_error"):
                 st.warning(f"FRED series '{sid}' returned no data for the selected date range.")
                 continue
 
@@ -146,29 +148,37 @@ def add_fred_series_to_dataframe(series_ids, combined_df, start_date, end_date):
                 st.warning(f"FRED series '{sid}' contains only invalid dates after parsing.")
                 continue
 
-            new_series_df = new_series.to_frame(name=col_name)
-            new_series_df.index.name = "obs_date"
-
-            combined_df = pd.concat([combined_df, new_series_df], axis=1)
-
-            # Remove any accidental duplicates
-            combined_df = combined_df.loc[:, ~combined_df.columns.duplicated()]
-
-            if col_name in combined_df.columns:
-                added.append(col_name)
-                ensure_selection_key(col_name)
-            else:
-                st.warning(f"Failed to properly add '{sid}' to dataframe.")
+            new_series.name = col_name
+            extras[col_name] = new_series
+            added.append(col_name)
+            ensure_selection_key(col_name)
 
         except Exception as e:
             st.error(f"Error fetching FRED series '{sid}': {e}")
             continue
 
-    # sync all selection keys to avoid sidebar issues (some may be new, some may be old)
-    for col in combined_df.columns:
-        ensure_selection_key(col)
+    return added
 
-    return combined_df, added
+
+def get_combined_df():
+    """
+    Merge the cached base dataframe with any user-added external series.
+    Returns None if no base dataframe has been loaded yet.
+    """
+    base = st.session_state.get("base_df")
+    if base is None:
+        return None
+    extras = st.session_state.get("external_series", {})
+    if not extras:
+        return base
+    extras_df = pd.concat(
+        [s.rename(name) for name, s in extras.items()],
+        axis=1,
+    )
+    extras_df.index.name = base.index.name
+    out = pd.concat([base, extras_df], axis=1)
+    out = out.loc[:, ~out.columns.duplicated()]
+    return out.sort_index()
 
 # -----------------------------
 # API KEYS
@@ -178,7 +188,7 @@ gemini_api_key = st.text_input("Input your Gemini API Key (Learn how to create o
 if gemini_api_key:
     try:
         genai.configure(api_key=gemini_api_key)
-        gemini_model = genai.GenerativeModel("gemini-embedding-001")
+        gemini_model = genai.GenerativeModel("gemini-2.0-flash")
         st.success("Gemini API key set successfully!")
     except Exception as e:
         gemini_model = None
@@ -189,13 +199,18 @@ else:
 fred_api_key = st.text_input("Input your FRED API Key (Learn how to create one [here](https://fredaccount.stlouisfed.org/apikeys)): ", type="password")
 
 if fred_api_key:
-    try:
-        fred = Fred(api_key=fred_api_key)
-        fred.search("gross domestic product", sort_order="asc")
+    if st.session_state.get("fred_key_validated") != fred_api_key:
+        try:
+            fred = Fred(api_key=fred_api_key)
+            fred.search("gross domestic product", sort_order="asc")
+            st.session_state["fred_key_validated"] = fred_api_key
+            st.success("FRED API key set successfully!")
+        except Exception as e:
+            st.session_state.pop("fred_key_validated", None)
+            st.error(f"Error setting FRED API key: {e}")
+            st.stop()
+    else:
         st.success("FRED API key set successfully!")
-    except Exception as e:
-        st.error(f"Error setting FRED API key: {e}")
-        st.stop()
 else:
     st.info("Enter your FRED API key to continue.")
     st.stop()
@@ -284,18 +299,21 @@ if "selected_series" not in st.session_state:
 if "selections" not in st.session_state:
     st.session_state.selections = {}
 
-if "combined_df" not in st.session_state:
-    st.session_state["combined_df"] = None
+if "base_df" not in st.session_state:
+    st.session_state["base_df"] = None
+
+if "external_series" not in st.session_state:
+    st.session_state["external_series"] = {}
 
 # -----------------------------
 # LOAD DATA BUTTON
 # -----------------------------
 if st.button("Load Data"):
     with st.spinner("Loading and combining data..."):
-        st.session_state["combined_df"] = build_combined(start_date, end_date)
+        st.session_state["base_df"] = build_combined(start_date, end_date)
         st.success("Data loaded successfully!")
 
-combined_df = st.session_state.get("combined_df")
+combined_df = get_combined_df()
 
 if combined_df is None:
     st.info("Click **Load Data** to fetch data.")
@@ -348,6 +366,14 @@ with st.sidebar.expander("Data Series You Have Selected", expanded=False):
             st.write(format_series_label(s))
     else:
         st.write("No series selected yet.")
+
+if st.sidebar.button("Generate Report", key="generate_report_btn"):
+    st.session_state.matches = []
+    add_message(
+        "assistant", "report",
+        "I've prepared your report from the series you selected."
+    )
+    st.rerun()
 
 # -----------------------------
 # CHAT HISTORY DISPLAY
@@ -447,7 +473,7 @@ if prompt:
             "Please click **Load Data** first so I can search your available series."
         )
 
-    elif "report" in prompt.lower():
+    elif prompt.strip().lower() == "generate report":
         st.session_state.matches = []
         add_message(
             "assistant", "report",
@@ -491,8 +517,7 @@ if prompt:
             valid_series_ids = [sid for sid in series_ids if str(sid).strip()]
 
             if valid_series_ids:
-                combined_df, added_matches = add_fred_series_to_dataframe(series_ids, combined_df, start_date, end_date)
-                st.session_state["combined_df"] = combined_df
+                added_matches = add_fred_series(series_ids, start_date, end_date)
                 st.session_state.matches = added_matches
 
                 if added_matches:
@@ -518,7 +543,6 @@ if prompt:
 
     st.rerun()
 
-# the chat handler (above) are reflected in the report and bottom preview panel to get new added data if searched from outside via FRED
-combined_df = st.session_state.get("combined_df")
-
-#to run : .venv\Scripts\Activate cd src python -m streamlit run agent_app.py
+# to run from project root:
+# .venv\Scripts\Activate
+# python -m streamlit run src\agent_app.py

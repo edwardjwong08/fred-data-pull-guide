@@ -1,5 +1,5 @@
 import pandas as pd
-from config import SEP_SERIES#, start_date, end_date
+from config import SEP_SERIES
 from utils.fred_utils import fred_call
 
 # ---------- Build SEP (wide & long) ----------
@@ -7,9 +7,14 @@ def pull_sep_wide(start_date, end_date) -> pd.DataFrame:
     frames = []
     for group, codes in SEP_SERIES.items():
         for label, code in codes.items():
-            s = fred_call(code, start_date, end_date).to_frame()
-            s.columns = [f"{group}.{label}.{code}"]
-            frames.append(s)
+            s = fred_call(code, start_date, end_date)
+            if s.empty or s.attrs.get("fred_error"):
+                continue
+            df = s.to_frame()
+            df.columns = [f"{group}.{label}.{code}"]
+            frames.append(df)
+    if not frames:
+        return pd.DataFrame()
     wide = pd.concat(frames, axis=1).sort_index()
     return wide
 

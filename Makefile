@@ -1,7 +1,8 @@
 # Makefile for FRED SEP + Actuals project
+# Run all targets from the project root.
 
 PYTHON := python
-MAIN   := combine.py
+MAIN   := src/combine.py
 OUTDIR := output_data
 
 # Output files
@@ -14,7 +15,7 @@ SEP_WIDE := $(OUTDIR)/sep_only_wide.csv
 all: $(SEP_TIDY) $(SEP_WIDE)
 
 # Run the main script to generate outputs
-$(SEP_TIDY) $(SEP_WIDE): $(MAIN) config.py src/utils/fred_utils.py src/utils/sep_utils.py src/utils/actuals_utils.py | $(OUTDIR)
+$(SEP_TIDY) $(SEP_WIDE): $(MAIN) src/config.py src/utils/fred_utils.py src/utils/sep_utils.py src/utils/actuals_utils.py | $(OUTDIR)
 	$(PYTHON) $(MAIN)
 
 # Ensure output directory exists
